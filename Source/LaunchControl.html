@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StarbaseSim Launch Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        body.light {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .telemetry-panel {
+            background: #2d2d2d;
+            border-radius: 10px;
+            padding: 30px;
+            border: 2px solid #3d3d3d;
+        }
+
+        #booster-engines {
+            position: absolute;
+            top: 380px; /* Adjust this to move it higher/lower */
+            left: 30px; /* Position from the right side */
+            margin: 0; /* Remove default margins */
+        }
+
+        #booster-engine-count {
+            position: absolute;
+            top: 680px; /* Position below the canvas (120 + 400 + 10) */
+            left: 30px;
+            text-align: center;
+            width: 400px; /* Match canvas width */
+        }
+
+        #ship-engines {
+            position: absolute;
+            top: 380px; /* Adjust this to move it higher/lower */
+            right: 100px; /* Position from the right side */
+            margin: 0; /* Remove default margins */
+        }
+
+        #ship-engine-count {
+            position: absolute;
+            top: 600px; /* Position below the canvas (120 + 400 + 10) */
+            right: 30px;
+            text-align: center;
+            width: 400px; /* Match canvas width */
+        }
+
+        body.light .telemetry-panel {
+            background: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+
+        .panel-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00ff00;
+        }
+
+        body.light .panel-title {
+            color: #008000;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            font-size: 18px;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            color: #aaa;
+        }
+
+        body.light .metric-label {
+            color: #555;
+        }
+
+        .metric-value {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        body.light .metric-value {
+            color: #008000;
+        }
+
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            min-width: 500px;
+        }
+
+        .theme-toggle {
+            padding: 10px 20px;
+            background: #3d3d3d;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        body.light .theme-toggle {
+            background: #e0e0e0;
+            color: black;
+        }
+
+        .theme-toggle:hover {
+            background: #4d4d4d;
+        }
+
+        body.light .theme-toggle:hover {
+            background: #d0d0d0;
+        }
+
+        .main-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .mission-title {
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #aaa;
+        }
+
+        body.light .mission-title {
+            color: #555;
+        }
+
+        .countdown-display {
+            font-family: 'Courier New', monospace;
+            font-size: 64px;
+            font-weight: bold;
+            color: #00ff00;
+            text-align: center;
+            margin: 30px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        body.light .countdown-display {
+            color: #008000;
+            text-shadow: none;
+        }
+
+        .status-display {
+            font-size: 24px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .message-display {
+            font-size: 18px;
+            text-align: center;
+            margin: 15px 0;
+            min-height: 30px;
+            color: #00ff00;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #3d3d3d;
+            color: white;
+        }
+
+        body.light .btn {
+            background: #e0e0e0;
+            color: black;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #4d4d4d;
+            transform: translateY(-2px);
+        }
+
+        body.light .btn:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #00ff00;
+            color: black;
+        }
+
+        .btn-danger {
+            background: #ff4444;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ff8800;
+            color: white;
+        }
+
+        .engine-canvas {
+            background: #2d2d2d;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        body.light .engine-canvas {
+            background: #f0f0f0;
+        }
+
+        .engine-count {
+            text-align: center;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .poll-section {
+            background: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #3d3d3d;
+            display: none;
+        }
+
+        body.light .poll-section {
+            background: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+
+        .poll-section.active {
+            display: block;
+        }
+
+        .poll-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .poll-items {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .poll-item {
+            text-align: center;
+        }
+
+        .poll-item-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .poll-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .poll-status {
+            margin-top: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status-pending { color: #ff8800; }
+        .status-go { color: #00ff00; }
+        .status-nogo { color: #ff4444; }
+
+        body.light .status-pending { color: #ff6600; }
+        body.light .status-go { color: #008000; }
+        body.light .status-nogo { color: #ff0000; }
+
+        .connection-status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .connection-status.connected { color: #00ff00; }
+        .connection-status.disconnected { color: #ff4444; }
+        .connection-status.waiting { color: #ff8800; }
+
+        .scripts-section {
+            background: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            border: 2px solid #3d3d3d;
+            max-width: 1200px;
+        }
+
+        body.light .scripts-section {
+            background: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+
+        .scripts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .script-group {
+            padding: 15px;
+        }
+
+        .script-group-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+
+        .radio-option input {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .jump-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .jump-input {
+            padding: 8px;
+            background: #3d3d3d;
+            border: 1px solid #555;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Courier New', monospace;
+            width: 120px;
+        }
+
+        body.light .jump-input {
+            background: white;
+            border-color: #ccc;
+            color: black;
+        }
+
+        .velocity-vectors {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        body.light .velocity-vectors {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- BOOSTER TELEMETRY -->
+        <div class="telemetry-panel">
+            <div class="panel-title">SUPER HEAVY BOOSTER</div>
+            <div class="metric-row">
+                <span class="metric-label">FUEL:</span>
+                <span class="metric-value" id="booster-fuel">0%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">LOX:</span>
+                <span class="metric-value" id="booster-lox">0%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">ALTITUDE:</span>
+                <span class="metric-value" id="booster-altitude">0 m</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">FUEL GAS:</span>
+                <span class="metric-value" id="booster-fuel-gas">0 t</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">LOX GAS:</span>
+                <span class="metric-value" id="booster-lox-gas">0 t</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">TURBOPUMP:</span>
+                <span class="metric-value" id="booster-turbopump">0 °C</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">SPEED:</span>
+                <span class="metric-value" id="booster-speed">0 km/h</span>
+            </div>
+            <div class="velocity-vectors" id="booster-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
+            
+            <canvas id="booster-engines" class="engine-canvas" width="400" height="400"></canvas>
+            <div class="engine-count" id="booster-engine-count">Engines Running: 0/33</div>
+        </div>
+
+        <!-- CENTER CONTROLS -->
+        <div class="center-panel">
+            <button class="theme-toggle" id="theme-toggle">☀️ Light Mode</button>
+            
+            <div class="main-title">STARBASESIM LAUNCH CONTROL</div>
+            <div class="mission-title">STARSHIP FLIGHT TEST</div>
+            
+            <div class="countdown-display" id="countdown">T-1:15:00</div>
+            <div class="status-display" id="status">PRE-LAUNCH</div>
+            <div class="message-display" id="message"></div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" id="start-btn">Start Countdown</button>
+                <div class="jump-controls">
+                    <input type="text" class="jump-input" id="jump-input" value="T-00:01:00" placeholder="T-00:01:00" disabled>
+                    <button class="btn" id="jump-btn" disabled>Jump</button>
+                </div>
+                <button class="btn btn-warning" id="hold-btn" disabled>Hold at T-40</button>
+                <button class="btn btn-danger" id="abort-btn" disabled>ABORT</button>
+                <button class="btn" id="release-btn" disabled>Release Hold</button>
+            </div>
+
+            <!-- PROPELLANT POLL -->
+            <div class="poll-section" id="propellant-poll">
+                <div class="poll-title">PROPELLANT LOAD GO/NO GO</div>
+                <div class="poll-items" id="propellant-items"></div>
+                <button class="btn btn-primary" id="propellant-final" disabled style="margin-top: 20px;">GO FOR PROPELLANT LOAD</button>
+            </div>
+
+            <!-- LAUNCH POLL -->
+            <div class="poll-section" id="launch-poll">
+                <div class="poll-title">LAUNCH GO/NO GO</div>
+                <div class="poll-items" id="launch-items"></div>
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; gap: 20px; justify-content: center;">
+                        <div>
+                            <div style="font-weight: bold; margin-bottom: 10px;">Booster Engines (1-33)</div>
+                            <button class="btn" id="booster-all-go">ALL GO</button>
+                            <button class="btn" id="booster-all-nogo">ALL NO GO</button>
+                            <div class="poll-status status-pending" id="booster-engines-status">PENDING</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: bold; margin-bottom: 10px;">Ship Engines (1-6)</div>
+                            <button class="btn" id="ship-all-go">ALL GO</button>
+                            <button class="btn" id="ship-all-nogo">ALL NO GO</button>
+                            <div class="poll-status status-pending" id="ship-engines-status">PENDING</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="launch-final" disabled style="margin-top: 20px;">GO FOR LAUNCH</button>
+            </div>
+
+            <div class="connection-status disconnected" id="connection">Disconnected</div>
+        </div>
+
+        <!-- SHIP TELEMETRY -->
+        <div class="telemetry-panel">
+            <div class="panel-title">STARSHIP</div>
+            <div class="metric-row">
+                <span class="metric-label">FUEL:</span>
+                <span class="metric-value" id="ship-fuel">0%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">LOX:</span>
+                <span class="metric-value" id="ship-lox">0%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">ALTITUDE:</span>
+                <span class="metric-value" id="ship-altitude">0 m</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">FUEL GAS:</span>
+                <span class="metric-value" id="ship-fuel-gas">0 t</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">LOX GAS:</span>
+                <span class="metric-value" id="ship-lox-gas">0 t</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">TURBOPUMP:</span>
+                <span class="metric-value" id="ship-turbopump">0 °C</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">SPEED:</span>
+                <span class="metric-value" id="ship-speed">0 m/s</span>
+            </div>
+            <div class="velocity-vectors" id="ship-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
+            
+            <canvas id="ship-engines" class="engine-canvas" width="250" height="250"></canvas>
+            <div class="engine-count" id="ship-engine-count">Engines Running: 0/6</div>
+        </div>
+    </div>
+
+    <!-- FLIGHT SCRIPTS -->
+    <div class="scripts-section">
+        <div class="poll-title">FLIGHT SCRIPTS</div>
+        <div class="scripts-grid">
+            <div class="script-group">
+                <div class="script-group-title">Ascent Script:</div>
+                <label class="radio-option">
+                    <input type="radio" name="ascent" value="1" checked>
+                    Script 1 (No Roll, Downwards Flip)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="ascent" value="2">
+                    Script 2 (Roll, Upwards Flip)
+                </label>
+            </div>
+            <div class="script-group">
+                <div class="script-group-title">Booster Script:</div>
+                <label class="radio-option">
+                    <input type="radio" name="booster" value="1" checked>
+                    Script 1 (Catch)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="booster" value="2">
+                    Script 2 (B13 Profile)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="booster" value="3">
+                    Script 3 (B14-2 Profile)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="booster" value="4">
+                    Script 4 (B15-2 Profile)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="booster" value="5">
+                    Script 5 (B16 Profile, Recommended)
+                </label>
+            </div>
+            <div class="script-group">
+                <div class="script-group-title">Ship Script:</div>
+                <label class="radio-option">
+                    <input type="radio" name="ship" value="1" checked>
+                    Script 1 (Normal Reentry)
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="ship" value="2">
+                    Script 2 (Hypersonic Drifting Reentry)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let connected = false;
+
+        // State
+        let countdownTime = 4500;
+        let countdownRunning = false;
+        let holdAtT40 = false;
+        let pastT5 = false;
+        let currentState = 'PRE_LAUNCH';
+
+        // Propellant constants
+        const MAX_BOOSTER_FUEL = 739.160;
+        const MAX_BOOSTER_LOX = 2660.840;
+        const MAX_SHIP_FUEL = 326.100;
+        const MAX_SHIP_LOX = 1173.851;
+
+        // Poll states
+        const propellantPollSystems = ['SQD', 'BQD', 'Tank Farm', 'Booster', 'Ship'];
+        const launchPollSystems = ['Booster', 'Ship', 'GSE'];
+        let propellantStates = {};
+        let launchStates = {};
+        let boosterEngines = Array(33).fill(null);
+        let shipEngines = Array(6).fill(null);
+
+        // Connect to WebSocket server
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                console.log('✅ Connected to server');
+                connected = true;
+                updateConnectionStatus();
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'telemetry') {
+                    updateTelemetry(data.data);
+                } else if (data.type === 'status') {
+                    connected = data.connected;
+                    updateConnectionStatus();
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('❌ Disconnected from server');
+                connected = false;
+                updateConnectionStatus();
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connection');
+            if (connected) {
+                statusEl.textContent = 'Connected - Receiving Data';
+                statusEl.className = 'connection-status connected';
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'connection-status disconnected';
+            }
+        }
+
+        function updateTelemetry(data) {
+            const objectname = data.objectname || '';
+            
+            if (objectname.startsWith('B')) {
+                updateBoosterTelemetry(data);
+            } else if (objectname.startsWith('S')) {
+                updateShipTelemetry(data);
+            }
+        }
+
+        function updateBoosterTelemetry(data) {
+            const fuelPercent = ((data.fuelMass / MAX_BOOSTER_FUEL) * 100) / 1000;
+            const loxPercent = ((data.oxidizerMass / MAX_BOOSTER_LOX) * 100) / 1000;
+            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2) * 3.6;
+    
+            document.getElementById('booster-fuel').textContent = `${fuelPercent.toFixed(1)}%`;
+            document.getElementById('booster-lox').textContent = `${loxPercent.toFixed(1)}%`;
+            document.getElementById('booster-altitude').textContent = `${data.location[2].toFixed(0)} m`;
+            document.getElementById('booster-speed').textContent = `${velocity.toFixed(0)} km/h`;
+    
+            // NEW: Add gas masses and turbopump temperature
+            document.getElementById('booster-fuel-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
+            document.getElementById('booster-lox-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
+            document.getElementById('booster-turbopump').textContent = `${(data.turbopumpTemperature - 273.15).toFixed(1)} °C`;
+    
+            // NEW: Add velocity vectors
+            document.getElementById('booster-velocity-vectors').textContent = 
+                `vx: ${(data.velocity[0] * 3.6).toFixed(1)}, vy: ${(data.velocity[1] * 3.6).toFixed(1)}, vz: ${(data.velocity[2] * 3.6).toFixed(1)} km/h`;
+    
+            const engineStatus = parseEngineBitmask(data.enginesThatAreRunningBitmask, 33);
+            const runningEngines = engineStatus.filter(e => e).length;
+            document.getElementById('booster-engine-count').textContent = `Engines Running: ${runningEngines}/33`;
+    
+            drawBoosterEngines(engineStatus);
+        }
+
+        function updateShipTelemetry(data) {
+            const fuelPercent = ((data.fuelMass / MAX_SHIP_FUEL) * 100) / 1000;
+            const loxPercent = ((data.oxidizerMass / MAX_SHIP_LOX) * 100) / 1000;
+            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2) * 3.6;
+    
+            document.getElementById('ship-fuel').textContent = `${fuelPercent.toFixed(1)}%`;
+            document.getElementById('ship-lox').textContent = `${loxPercent.toFixed(1)}%`;
+            document.getElementById('ship-altitude').textContent = `${data.location[2].toFixed(0)} m`;
+            document.getElementById('ship-speed').textContent = `${velocity.toFixed(0)} km/h`;
+    
+            // NEW: Add gas masses (convert from kg to tons with /1000) and turbopump temperature
+            document.getElementById('ship-fuel-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
+            document.getElementById('ship-lox-gas').textContent = `${(data.oxidizerGasMass / 1000).toFixed(2)} t`;
+            document.getElementById('ship-turbopump').textContent = `${(data.turbopumpTemperature - 273.15).toFixed(1)} °C`;
+    
+            // NEW: Add velocity vectors (convert to km/h with * 3.6)
+            document.getElementById('ship-velocity-vectors').textContent = 
+                `vx: ${(data.velocity[0] * 3.6).toFixed(1)}, vy: ${(data.velocity[1] * 3.6).toFixed(1)}, vz: ${(data.velocity[2] * 3.6).toFixed(1)} km/h`;
+    
+            const engineStatus = parseEngineBitmask(data.enginesThatAreRunningBitmask, 6);
+            const runningEngines = engineStatus.filter(e => e).length;
+            document.getElementById('ship-engine-count').textContent = `Engines Running: ${runningEngines}/6`;
+    
+            drawShipEngines(engineStatus);
+        }
+
+        function parseEngineBitmask(bitmask, count) {
+            const engines = [];
+            for (let i = 0; i < count; i++) {
+                // Use BigInt for bitmasks larger than 32 bits
+                const mask = BigInt(1) << BigInt(i);
+                engines.push((BigInt(bitmask) & mask) !== BigInt(0));
+            }
+            return engines;
+        }
+
+        // Engine visualization
+        function drawBoosterEngines(engineStatus) {
+            const canvas = document.getElementById('booster-engines');
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const layout = [
+                { radius: 17.5, count: 3 },
+                { radius: 47.5, count: 10 },
+                { radius: 82.5, count: 20 }
+            ];
+            
+            let engineIndex = 0;
+            layout.forEach((ring, ringIdx) => {
+                const angleStep = (2 * Math.PI) / ring.count;
+                for (let i = 0; i < ring.count; i++) {
+                    const angle = i * angleStep + (3 * Math.PI) / 2;
+                    const x = centerX + ring.radius * Math.cos(angle);
+                    const y = centerY + ring.radius * Math.sin(angle);
+                    
+                    const isRunning = engineStatus[engineIndex];
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, 2 * Math.PI);
+                    ctx.fillStyle = isRunning ? '#00ff00' : '#ff4444';
+                    ctx.fill();
+                    ctx.strokeStyle = document.body.classList.contains('light') ? '#000' : '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    engineIndex++;
+                }
+            });
+        }
+
+        function drawShipEngines(engineStatus) {
+            const canvas = document.getElementById('ship-engines');
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const layout = [
+                { radius: 17.5, count: 3, size: 12 },
+                { radius: 55, count: 3, size: 18 }
+            ];
+            
+            let engineIndex = 0;
+            layout.forEach((ring, ringIdx) => {
+                const angleStep = (2 * Math.PI) / ring.count;
+                for (let i = 0; i < ring.count; i++) {
+                    const angle = ringIdx === 0 ? 
+                        i * angleStep + (3 * Math.PI) / 2 : 
+                        i * angleStep - 0.52;
+                    const x = centerX + ring.radius * Math.cos(angle);
+                    const y = centerY + ring.radius * Math.sin(angle);
+                    
+                    const isRunning = engineStatus[engineIndex];
+                    ctx.beginPath();
+                    ctx.arc(x, y, ring.size, 0, 2 * Math.PI);
+                    ctx.fillStyle = isRunning ? '#00ff00' : '#ff4444';
+                    ctx.fill();
+                    ctx.strokeStyle = document.body.classList.contains('light') ? '#000' : '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    engineIndex++;
+                }
+            });
+        }
+
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('light');
+            const btn = document.getElementById('theme-toggle');
+            btn.textContent = document.body.classList.contains('light') ? '🌙 Dark Mode' : '☀️ Light Mode';
+            
+            // Redraw engines with new theme
+            drawBoosterEngines(Array(33).fill(false));
+            drawShipEngines(Array(6).fill(false));
+        });
+
+        // Countdown controls
+        document.getElementById('start-btn').addEventListener('click', startCountdown);
+        document.getElementById('hold-btn').addEventListener('click', holdAtT40Command);
+        document.getElementById('abort-btn').addEventListener('click', abortLaunch);
+        document.getElementById('release-btn').addEventListener('click', releaseHold);
+        document.getElementById('jump-btn').addEventListener('click', jumpToTime);
+
+        function startCountdown() {
+            currentState = 'PROPELLANT_POLL';
+            document.getElementById('status').textContent = 'PROPELLANT LOAD POLL';
+            document.getElementById('propellant-poll').classList.add('active');
+            document.getElementById('start-btn').disabled = true;
+        }
+
+        function startCountdownPhase() {
+            currentState = 'COUNTING';
+            document.getElementById('status').textContent = 'COUNTING DOWN';
+            countdownRunning = true;
+            document.getElementById('hold-btn').disabled = false;
+            document.getElementById('abort-btn').disabled = false;
+            document.getElementById('jump-btn').disabled = false;
+            document.getElementById('jump-input').disabled = false;
+            countdownLoop();
+        }
+
+        function countdownLoop() {
+            if (!countdownRunning) return;
+            
+            countdownTime--;
+            updateCountdownDisplay();
+            
+            if (countdownTime > 0) {
+                if (countdownTime === 300) {
+                    startLaunchPoll();
+                }
+                if (countdownTime === 45) {
+                    showMessage('FINAL GO FOR LAUNCH', 'green');
+                }
+                if (countdownTime === 40 && holdAtT40) {
+                    holdCountdown();
+                    return;
+                }
+                if (countdownTime === 30) {
+                    showMessage("We're GO for launch", 'green', 7500);
+                }
+                if (countdownTime === 5) {
+                    pastT5 = true;
+                }
+            }
+            
+            if (countdownTime === 0) {
+                launch();
+                return;
+            }
+            
+            setTimeout(countdownLoop, 1000);
+        }
+
+        function updateCountdownDisplay() {
+            let displayText;
+            if (countdownTime > 0) {
+                const hours = Math.floor(countdownTime / 3600);
+                const minutes = Math.floor((countdownTime % 3600) / 60);
+                const seconds = countdownTime % 60;
+                displayText = `T-${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else if (countdownTime === 0) {
+                displayText = 'T-0';
+            } else {
+                const positiveTime = Math.abs(countdownTime);
+                const hours = Math.floor(positiveTime / 3600);
+                const minutes = Math.floor((positiveTime % 3600) / 60);
+                const seconds = positiveTime % 60;
+                displayText = `T+${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            document.getElementById('countdown').textContent = displayText;
+        }
+
+        function jumpToTime() {
+            if (!countdownRunning && currentState !== 'HOLD') return;
+            
+            const input = document.getElementById('jump-input').value.trim().toUpperCase();
+            try {
+                let timeStr = input.startsWith('T-') ? input.substring(2) : input;
+                const totalSeconds = parseTimeString(timeStr);
+                
+                if (totalSeconds < 0) {
+                    showMessage('Invalid time: cannot jump to negative time', 'red');
+                    return;
+                }
+                
+                const oldTime = countdownTime;
+                countdownTime = totalSeconds;
+                updateCountdownDisplay();
+                
+                if (totalSeconds === 0) {
+                    launch();
+                    showMessage('Jumped to T-0 - Launching!', 'green');
+                } else if (totalSeconds <= 40 && holdAtT40) {
+                    holdCountdown();
+                    showMessage(`Jumped to T-${totalSeconds} - Holding at T-40`, 'orange');
+                } else {
+                    showMessage(`Jumped from T-${oldTime} to T-${totalSeconds}`, 'blue');
+                }
+            } catch (e) {
+                showMessage(`Invalid time format: ${input}`, 'red');
+            }
+        }
+
+        function parseTimeString(timeStr) {
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+            } else if (parts.length === 2) {
+                return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            } else if (parts.length === 1) {
+                return parseInt(parts[0]);
+            }
+            throw new Error('Invalid format');
+        }
+
+        function holdAtT40Command() {
+            if (countdownTime > 40) {
+                holdAtT40 = true;
+                document.getElementById('hold-btn').disabled = true;
+                showMessage('Will hold at T-40 seconds', 'orange');
+            } else if (countdownTime <= 40 && countdownRunning) {
+                countdownTime = 40;
+                updateCountdownDisplay();
+                holdCountdown();
+                showMessage('Reverted to T-40 and holding', 'orange');
+            }
+        }
+
+        function holdCountdown() {
+            currentState = 'HOLD';
+            document.getElementById('status').textContent = 'HOLD';
+            countdownRunning = false;
+            showMessage('HOLD at T-40 seconds', 'orange');
+            document.getElementById('release-btn').disabled = false;
+        }
+
+        function releaseHold() {
+            if (currentState === 'HOLD') {
+                holdAtT40 = false;
+                currentState = 'COUNTING';
+                document.getElementById('status').textContent = 'COUNTING DOWN';
+                countdownRunning = true;
+                showMessage('Resuming countdown', 'green');
+                document.getElementById('release-btn').disabled = true;
+                document.getElementById('hold-btn').disabled = false;
+                countdownLoop();
+            }
+        }
+
+        function abortLaunch() {
+            currentState = 'ABORT';
+            document.getElementById('status').textContent = 'ABORT';
+            countdownRunning = false;
+            showMessage('LAUNCH ABORTED', 'red');
+            document.getElementById('abort-btn').disabled = true;
+            document.getElementById('hold-btn').disabled = true;
+            document.getElementById('release-btn').disabled = true;
+            document.getElementById('jump-btn').disabled = true;
+            document.getElementById('jump-input').disabled = true;
+        }
+
+        function launch() {
+            currentState = 'LAUNCH';
+            document.getElementById('status').textContent = 'LAUNCH!';
+            showMessage('LIFTOFF!', 'green');
+            document.getElementById('jump-btn').disabled = true;
+            document.getElementById('jump-input').disabled = true;
+            
+            // Send launch command to server (which forwards to game)
+            sendGameCommand({ command: 5, target: 'booster', state: true });
+        }
+
+        function sendGameCommand(command) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'game_command',
+                    command: command
+                }));
+            }
+        }
+
+        function showMessage(message, color, duration = 3000) {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = message;
+            msgEl.style.color = color;
+            if (duration > 0) {
+                setTimeout(() => msgEl.textContent = '', duration);
+            }
+        }
+
+        function startLaunchPoll() {
+            currentState = 'LAUNCH_POLL';
+            document.getElementById('status').textContent = 'LAUNCH POLL';
+            document.getElementById('launch-poll').classList.add('active');
+        }
+
+        // Setup propellant poll
+        function setupPropellantPoll() {
+            const container = document.getElementById('propellant-items');
+            propellantPollSystems.forEach(system => {
+                propellantStates[system] = null;
+                const div = document.createElement('div');
+                div.className = 'poll-item';
+                div.innerHTML = `
+                    <div class="poll-item-title">${system}</div>
+                    <div class="poll-buttons">
+                        <button class="btn" onclick="setPropellantDecision('${system}', true)">GO</button>
+                        <button class="btn" onclick="setPropellantDecision('${system}', false)">NO GO</button>
+                    </div>
+                    <div class="poll-status status-pending" id="prop-${system}">PENDING</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function setPropellantDecision(system, decision) {
+            propellantStates[system] = decision;
+            const statusEl = document.getElementById(`prop-${system}`);
+            if (decision) {
+                statusEl.textContent = 'GO';
+                statusEl.className = 'poll-status status-go';
+            } else {
+                statusEl.textContent = 'NO GO';
+                statusEl.className = 'poll-status status-nogo';
+            }
+            checkPropellantPoll();
+        }
+
+        function checkPropellantPoll() {
+            const allDecided = Object.values(propellantStates).every(v => v !== null);
+            const allGo = Object.values(propellantStates).every(v => v === true);
+            
+            document.getElementById('propellant-final').disabled = !(allDecided && allGo);
+            
+            if (allDecided && !allGo) {
+                showMessage('Propellant Load: NO GO - Maybe another time', 'red');
+                setTimeout(resetPropellantPoll, 3000);
+            }
+        }
+
+        function resetPropellantPoll() {
+            propellantPollSystems.forEach(system => {
+                propellantStates[system] = null;
+                const statusEl = document.getElementById(`prop-${system}`);
+                statusEl.textContent = 'PENDING';
+                statusEl.className = 'poll-status status-pending';
+            });
+            document.getElementById('propellant-final').disabled = true;
+            showMessage('Propellant poll reset - Please make decisions again', 'blue');
+        }
+
+        document.getElementById('propellant-final').addEventListener('click', () => {
+            showMessage('PROPELLANT LOAD - GO!', 'green');
+            document.getElementById('propellant-poll').classList.remove('active');
+            startCountdownPhase();
+        });
+
+        // Setup launch poll
+        function setupLaunchPoll() {
+            const container = document.getElementById('launch-items');
+            launchPollSystems.forEach(system => {
+                launchStates[system] = null;
+                const div = document.createElement('div');
+                div.className = 'poll-item';
+                div.innerHTML = `
+                    <div class="poll-item-title">${system}</div>
+                    <div class="poll-buttons">
+                        <button class="btn" onclick="setLaunchDecision('${system}', true)">GO</button>
+                        <button class="btn" onclick="setLaunchDecision('${system}', false)">NO GO</button>
+                    </div>
+                    <div class="poll-status status-pending" id="launch-${system}">PENDING</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function setLaunchDecision(system, decision) {
+            launchStates[system] = decision;
+            const statusEl = document.getElementById(`launch-${system}`);
+            if (decision) {
+                statusEl.textContent = 'GO';
+                statusEl.className = 'poll-status status-go';
+            } else {
+                statusEl.textContent = 'NO GO';
+                statusEl.className = 'poll-status status-nogo';
+            }
+            checkLaunchPoll();
+        }
+
+        document.getElementById('booster-all-go').addEventListener('click', () => {
+            boosterEngines = Array(33).fill(true);
+            checkLaunchPoll();
+        });
+
+        document.getElementById('booster-all-nogo').addEventListener('click', () => {
+            boosterEngines = Array(33).fill(false);
+            checkLaunchPoll();
+        });
+
+        document.getElementById('ship-all-go').addEventListener('click', () => {
+            shipEngines = Array(6).fill(true);
+            checkLaunchPoll();
+        });
+
+        document.getElementById('ship-all-nogo').addEventListener('click', () => {
+            shipEngines = Array(6).fill(false);
+            checkLaunchPoll();
+        });
+
+        function checkLaunchPoll() {
+            const systemsDecided = Object.values(launchStates).every(v => v !== null);
+            const systemsGo = Object.values(launchStates).every(v => v === true);
+            
+            const boosterDecided = boosterEngines.every(e => e !== null);
+            const boosterGo = boosterEngines.every(e => e === true);
+            
+            const shipDecided = shipEngines.every(e => e !== null);
+            const shipGo = shipEngines.every(e => e === true);
+            
+            // Update engine status displays
+            const boosterStatus = document.getElementById('booster-engines-status');
+            if (boosterDecided) {
+                boosterStatus.textContent = boosterGo ? 'GO' : 'NO GO';
+                boosterStatus.className = `poll-status ${boosterGo ? 'status-go' : 'status-nogo'}`;
+            } else {
+                boosterStatus.textContent = 'PENDING';
+                boosterStatus.className = 'poll-status status-pending';
+            }
+            
+            const shipStatus = document.getElementById('ship-engines-status');
+            if (shipDecided) {
+                shipStatus.textContent = shipGo ? 'GO' : 'NO GO';
+                shipStatus.className = `poll-status ${shipGo ? 'status-go' : 'status-nogo'}`;
+            } else {
+                shipStatus.textContent = 'PENDING';
+                shipStatus.className = 'poll-status status-pending';
+            }
+            
+            const allGo = systemsGo && boosterGo && shipGo;
+            const allDecided = systemsDecided && boosterDecided && shipDecided;
+            
+            document.getElementById('launch-final').disabled = !(allDecided && allGo);
+            
+            if (allDecided && !allGo && currentState === 'COUNTING') {
+                if (countdownTime > 40) {
+                    holdAtT40 = true;
+                    showMessage('Launch: NO GO - Will hold at T-40', 'orange');
+                } else {
+                    abortLaunch();
+                }
+            }
+        }
+
+        document.getElementById('launch-final').addEventListener('click', () => {
+            showMessage('LAUNCH - GO!', 'green');
+            document.getElementById('launch-poll').classList.remove('active');
+        });
+
+        // Make functions global for onclick handlers
+        window.setPropellantDecision = setPropellantDecision;
+        window.setLaunchDecision = setLaunchDecision;
+
+        // Initialize
+        setupPropellantPoll();
+        setupLaunchPoll();
+        connectWebSocket();
+        
+        // Initial engine draw
+        drawBoosterEngines(Array(33).fill(false));
+        drawShipEngines(Array(6).fill(false));
+    </script>
+</body>
+</html>
