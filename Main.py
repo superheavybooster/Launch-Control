@@ -41,32 +41,32 @@ class LaunchControlApp:
         """Start the WebSocket server in background thread"""
         def run_server():
             try:
-                print("Starting Server...")
+                print(">> Starting Server...")
                 asyncio.run(Server.main())
             except Exception as e:
-                print(f"Server error: {e}")
+                print(f"!! Server error: {e}")
         
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
         self.server_running = True
-        print("Server started")
+        print(">> Server started")
     
     def start_flight_software(self):
         """Start flight software in background thread"""
         def run_flight_software():
             try:
-                print("Starting Flight Software...")
+                print(">> Starting Flight Software...")
                 # Give server time to start
                 import time
                 time.sleep(2)
                 asyncio.run(FlightSoftware.main())
             except Exception as e:
-                print(f"Flight Software error: {e}")
+                print(f"!! Flight Software error: {e}")
         
         flight_thread = threading.Thread(target=run_flight_software, daemon=True)
         flight_thread.start()
         self.flight_software_running = True
-        print("Flight Software started")
+        print(">> Flight Software started")
     
     def run(self):
         """Main application entry point"""
@@ -88,22 +88,22 @@ class LaunchControlApp:
         html_content = self.get_html_content()
         
         # Create window with PyWebView
-        print("Opening Launch Control window...")
+        print(">> Opening Launch Control window...")
         window = webview.create_window(
             title='StarbaseSim Launch Control',
             html=html_content,
-            width=1920,
-            height=1080,
+            width=1600,
+            height=900,
             resizable=True,
             fullscreen=False,
-            min_size=(1280, 720),
+            min_size=(1024, 768),
             background_color='#1e1e1e'
         )
         
         # Start webview (this blocks until window is closed)
         webview.start(debug=False)  # Set debug=True if YOU need to debug
         
-        print("Launch Control closed")
+        print(">> Launch Control closed")
 
 def main():
     """Entry point"""

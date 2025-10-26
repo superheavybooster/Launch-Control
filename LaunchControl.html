@@ -31,41 +31,72 @@
             min-height: 100vh;
         }
 
+        /* Responsive layout for smaller screens */
+        @media (max-width: 1600px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .center-panel {
+                order: -1; /* Move center panel to top */
+            }
+        }
+
+        @media (max-height: 900px) {
+            .panel-title {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+
+            .metric-row {
+                margin: 10px 0;
+                font-size: 16px;
+            }
+
+            .metric-value {
+                font-size: 18px;
+            }
+
+            .countdown-display {
+                font-size: 48px;
+                margin: 20px 0;
+            }
+
+            .status-display {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-height: 768px) {
+            .telemetry-panel {
+                padding: 15px;
+            }
+
+            .countdown-display {
+                font-size: 36px;
+                margin: 15px 0;
+            }
+
+            .main-title {
+                font-size: 22px;
+            }
+
+            .mission-title {
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+
+            #booster-engines, #ship-engines {
+                transform: scale(0.8);
+            }
+        }
+
         .telemetry-panel {
             background: #2d2d2d;
             border-radius: 10px;
             padding: 30px;
             border: 2px solid #3d3d3d;
-        }
-
-        #booster-engines {
-            position: absolute;
-            top: 380px; /* Adjust this to move it higher/lower */
-            left: 30px; /* Position from the right side */
-            margin: 0; /* Remove default margins */
-        }
-
-        #booster-engine-count {
-            position: absolute;
-            top: 680px; /* Position below the canvas (120 + 400 + 10) */
-            left: 30px;
-            text-align: center;
-            width: 400px; /* Match canvas width */
-        }
-
-        #ship-engines {
-            position: absolute;
-            top: 380px; /* Adjust this to move it higher/lower */
-            right: 100px; /* Position from the right side */
-            margin: 0; /* Remove default margins */
-        }
-
-        #ship-engine-count {
-            position: absolute;
-            top: 600px; /* Position below the canvas (120 + 400 + 10) */
-            right: 30px;
-            text-align: center;
-            width: 400px; /* Match canvas width */
         }
 
         body.light .telemetry-panel {
@@ -398,19 +429,6 @@
             border-color: #ccc;
             color: black;
         }
-
-        .velocity-vectors {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            margin-top: -10px;
-            margin-bottom: 15px;
-        }
-
-        body.light .velocity-vectors {
-            color: #666;
-        }
     </style>
 </head>
 <body>
@@ -420,33 +438,20 @@
             <div class="panel-title">SUPER HEAVY BOOSTER</div>
             <div class="metric-row">
                 <span class="metric-label">FUEL:</span>
-                <span class="metric-value" id="booster-fuel">0%</span>
+                <span class="metric-value" id="booster-fuel">100%</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">LOX:</span>
-                <span class="metric-value" id="booster-lox">0%</span>
+                <span class="metric-value" id="booster-lox">100%</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">ALTITUDE:</span>
                 <span class="metric-value" id="booster-altitude">0 m</span>
             </div>
             <div class="metric-row">
-                <span class="metric-label">FUEL GAS:</span>
-                <span class="metric-value" id="booster-fuel-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX GAS:</span>
-                <span class="metric-value" id="booster-lox-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">TURBOPUMP:</span>
-                <span class="metric-value" id="booster-turbopump">0 °C</span>
-            </div>
-            <div class="metric-row">
                 <span class="metric-label">SPEED:</span>
-                <span class="metric-value" id="booster-speed">0 km/h</span>
+                <span class="metric-value" id="booster-speed">0 m/s</span>
             </div>
-            <div class="velocity-vectors" id="booster-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
             
             <canvas id="booster-engines" class="engine-canvas" width="400" height="400"></canvas>
             <div class="engine-count" id="booster-engine-count">Engines Running: 0/33</div>
@@ -512,33 +517,20 @@
             <div class="panel-title">STARSHIP</div>
             <div class="metric-row">
                 <span class="metric-label">FUEL:</span>
-                <span class="metric-value" id="ship-fuel">0%</span>
+                <span class="metric-value" id="ship-fuel">100%</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">LOX:</span>
-                <span class="metric-value" id="ship-lox">0%</span>
+                <span class="metric-value" id="ship-lox">100%</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">ALTITUDE:</span>
                 <span class="metric-value" id="ship-altitude">0 m</span>
             </div>
             <div class="metric-row">
-                <span class="metric-label">FUEL GAS:</span>
-                <span class="metric-value" id="ship-fuel-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX GAS:</span>
-                <span class="metric-value" id="ship-lox-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">TURBOPUMP:</span>
-                <span class="metric-value" id="ship-turbopump">0 °C</span>
-            </div>
-            <div class="metric-row">
                 <span class="metric-label">SPEED:</span>
                 <span class="metric-value" id="ship-speed">0 m/s</span>
             </div>
-            <div class="velocity-vectors" id="ship-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
             
             <canvas id="ship-engines" class="engine-canvas" width="250" height="250"></canvas>
             <div class="engine-count" id="ship-engine-count">Engines Running: 0/6</div>
@@ -677,54 +669,36 @@
         }
 
         function updateBoosterTelemetry(data) {
-            const fuelPercent = ((data.fuelMass / MAX_BOOSTER_FUEL) * 100) / 1000;
-            const loxPercent = ((data.oxidizerMass / MAX_BOOSTER_LOX) * 100) / 1000;
-            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2) * 3.6;
-    
+            const fuelPercent = (data.fuelMass / MAX_BOOSTER_FUEL) * 100;
+            const loxPercent = (data.oxidizerMass / MAX_BOOSTER_LOX) * 100;
+            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2);
+            
             document.getElementById('booster-fuel').textContent = `${fuelPercent.toFixed(1)}%`;
             document.getElementById('booster-lox').textContent = `${loxPercent.toFixed(1)}%`;
             document.getElementById('booster-altitude').textContent = `${data.location[2].toFixed(0)} m`;
-            document.getElementById('booster-speed').textContent = `${velocity.toFixed(0)} km/h`;
-    
-            // NEW: Add gas masses and turbopump temperature
-            document.getElementById('booster-fuel-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
-            document.getElementById('booster-lox-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
-            document.getElementById('booster-turbopump').textContent = `${(data.turbopumpTemperature - 273.15).toFixed(1)} °C`;
-    
-            // NEW: Add velocity vectors
-            document.getElementById('booster-velocity-vectors').textContent = 
-                `vx: ${(data.velocity[0] * 3.6).toFixed(1)}, vy: ${(data.velocity[1] * 3.6).toFixed(1)}, vz: ${(data.velocity[2] * 3.6).toFixed(1)} km/h`;
-    
+            document.getElementById('booster-speed').textContent = `${velocity.toFixed(0)} m/s`;
+            
             const engineStatus = parseEngineBitmask(data.enginesThatAreRunningBitmask, 33);
             const runningEngines = engineStatus.filter(e => e).length;
             document.getElementById('booster-engine-count').textContent = `Engines Running: ${runningEngines}/33`;
-    
+            
             drawBoosterEngines(engineStatus);
         }
 
         function updateShipTelemetry(data) {
-            const fuelPercent = ((data.fuelMass / MAX_SHIP_FUEL) * 100) / 1000;
-            const loxPercent = ((data.oxidizerMass / MAX_SHIP_LOX) * 100) / 1000;
-            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2) * 3.6;
-    
+            const fuelPercent = (data.fuelMass / MAX_SHIP_FUEL) * 100;
+            const loxPercent = (data.oxidizerMass / MAX_SHIP_LOX) * 100;
+            const velocity = Math.sqrt(data.velocity[0]**2 + data.velocity[1]**2 + data.velocity[2]**2);
+            
             document.getElementById('ship-fuel').textContent = `${fuelPercent.toFixed(1)}%`;
             document.getElementById('ship-lox').textContent = `${loxPercent.toFixed(1)}%`;
             document.getElementById('ship-altitude').textContent = `${data.location[2].toFixed(0)} m`;
-            document.getElementById('ship-speed').textContent = `${velocity.toFixed(0)} km/h`;
-    
-            // NEW: Add gas masses (convert from kg to tons with /1000) and turbopump temperature
-            document.getElementById('ship-fuel-gas').textContent = `${(data.fuelGasMass / 1000).toFixed(2)} t`;
-            document.getElementById('ship-lox-gas').textContent = `${(data.oxidizerGasMass / 1000).toFixed(2)} t`;
-            document.getElementById('ship-turbopump').textContent = `${(data.turbopumpTemperature - 273.15).toFixed(1)} °C`;
-    
-            // NEW: Add velocity vectors (convert to km/h with * 3.6)
-            document.getElementById('ship-velocity-vectors').textContent = 
-                `vx: ${(data.velocity[0] * 3.6).toFixed(1)}, vy: ${(data.velocity[1] * 3.6).toFixed(1)}, vz: ${(data.velocity[2] * 3.6).toFixed(1)} km/h`;
-    
+            document.getElementById('ship-speed').textContent = `${velocity.toFixed(0)} m/s`;
+            
             const engineStatus = parseEngineBitmask(data.enginesThatAreRunningBitmask, 6);
             const runningEngines = engineStatus.filter(e => e).length;
             document.getElementById('ship-engine-count').textContent = `Engines Running: ${runningEngines}/6`;
-    
+            
             drawShipEngines(engineStatus);
         }
 
@@ -748,9 +722,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             const layout = [
-                { radius: 17.5, count: 3 },
-                { radius: 47.5, count: 10 },
-                { radius: 82.5, count: 20 }
+                { radius: 25, count: 3 },
+                { radius: 60, count: 10 },
+                { radius: 95, count: 20 }
             ];
             
             let engineIndex = 0;
@@ -784,7 +758,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             const layout = [
-                { radius: 17.5, count: 3, size: 12 },
+                { radius: 15, count: 3, size: 12 },
                 { radius: 55, count: 3, size: 18 }
             ];
             
