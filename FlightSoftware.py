@@ -62,6 +62,17 @@ class FlightSoftware:
         self.booster_script = 1
         self.ship_script = 1
         
+        # Propellant filling tracking
+        self.filling_active = False
+        self.ship_fill_start_time = None
+        self.booster_fill_start_time = None
+        self.ship_target_propellant = 1500  # tons
+        self.booster_target_propellant = 3400  # tons
+        self.ship_fill_duration = 46 * 60 + 40  # 46 minutes 40 seconds
+        self.booster_fill_duration = 38 * 60 + 25  # 38 minutes 25 seconds
+        self.ship_initial_wait = 17 * 60  # 17 minutes
+        self.booster_initial_wait = 33 * 60 + 15  # 33 minutes 15 seconds
+        
     async def connect(self):
         """Connect to the server WebSocket"""
         try:
@@ -92,7 +103,7 @@ class FlightSoftware:
         """Receive telemetry data from server"""
         try:
             async for message in self.ws:
-                data = json.parse(message)
+                data = json.loads(message)  # Fixed: changed parse to loads
                 if data.get('type') == 'telemetry':
                     telem = data.get('data', {})
                     objectname = telem.get('objectname', '')
@@ -145,26 +156,41 @@ class FlightSoftware:
         data = self.telemetry.get(vehicle)
         if not data:
             return 0
-            
+        
         if vehicle == 'booster':
-            max_fuel = 739.160
-            return (data.get('fuelMass', 0) / max_fuel) * 100
+            max_fuel_kg = 739.160 * 1000  # Convert tons to kg
+            fuel_kg = data.get('fuelMass', 0)
+            return (fuel_kg / max_fuel_kg) * 100
         else:
-            max_fuel = 326.100
-            return (data.get('fuelMass', 0) / max_fuel) * 100
-    
+            max_fuel_kg = 326.100 * 1000  # Convert tons to kg
+            fuel_kg = data.get('fuelMass', 0)
+            return (fuel_kg / max_fuel_kg) * 100
+
     def get_lox_percent(self, vehicle='booster'):
         """Get LOX percentage"""
         data = self.telemetry.get(vehicle)
         if not data:
             return 0
-            
+        
         if vehicle == 'booster':
-            max_lox = 2660.840
-            return (data.get('oxidizerMass', 0) / max_lox) * 100
+            max_lox_kg = 2660.840 * 1000  # Convert tons to kg
+            lox_kg = data.get('oxidizerMass', 0)
+            return (lox_kg / max_lox_kg) * 100
         else:
-            max_lox = 1173.851
-            return (data.get('oxidizerMass', 0) / max_lox) * 100
+            max_lox_kg = 1173.851 * 1000  # Convert tons to kg
+            lox_kg = data.get('oxidizerMass', 0)
+            return (lox_kg / max_lox_kg) * 100
+    
+    def get_total_propellant(self, vehicle='booster'):
+        """Get total propellant mass (fuel + oxidizer) in TONS"""
+        data = self.telemetry.get(vehicle)
+        if not data:
+            return 0
+        # Convert from kg to tons by dividing by 1000
+        fuel_kg = data.get('fuelMass', 0)
+        oxidizer_kg = data.get('oxidizerMass', 0)
+        total_kg = fuel_kg + oxidizer_kg
+        return total_kg / 1000  # Convert to tons
     
     async def start_engines(self, vehicle, engine_list=None):
         """
@@ -240,6 +266,15 @@ class FlightSoftware:
             'value': angle
         })
     
+    async def set_propellant(self, vehicle, mass_tons):
+        """Set propellant mass in TONS (converts to kg for game)"""
+        mass_kg = mass_tons * 1000  # Convert tons to kg for game
+        await self.send_command({
+            'command': int(GameCommand.Propellant),
+            'target': vehicle,
+            'value': mass_kg  # Game expects kg
+        })
+    
     async def hot_stage(self):
         """Trigger hot staging"""
         await self.send_command({
@@ -269,6 +304,103 @@ class FlightSoftware:
         return True
     
     # =========================================================================
+    # PROPELLANT FILLING LOGIC
+    # =========================================================================
+    
+    async def start_propellant_filling(self):
+        """Start the propellant filling process for both vehicles"""
+        if self.filling_active:
+            print("Propellant filling already active!")
+            return
+        
+        self.filling_active = True
+        self.ship_fill_start_time = time.time()
+        self.booster_fill_start_time = time.time()
+        
+        print("=" * 60)
+        print("STARTING PROPELLANT FILLING SEQUENCE")
+        print(f"Ship S0: {self.ship_target_propellant} tons over {self.ship_fill_duration}s")
+        print(f"Booster B0: {self.booster_target_propellant} tons over {self.booster_fill_duration}s")
+        print("=" * 60)
+        
+        # Start both filling tasks
+        asyncio.create_task(self._fill_ship_propellant())
+        asyncio.create_task(self._fill_booster_propellant())
+    
+    async def _fill_ship_propellant(self):
+        """Fill ship propellant gradually over time"""
+        print(f"Waiting {self.ship_initial_wait}s before starting ship fill...")
+        await asyncio.sleep(self.ship_initial_wait)
+        
+        print("Starting ship propellant fill...")
+        start_fill_time = time.time()
+        
+        while self.filling_active:
+            current_time = time.time()
+            elapsed_fill_time = current_time - start_fill_time
+            
+            if elapsed_fill_time >= self.ship_fill_duration:
+                # Final fill to exact target
+                await self.set_propellant('S0', self.ship_target_propellant)
+                print(f"Ship propellant fill COMPLETE: {self.ship_target_propellant} tons")
+                break
+            
+            # Calculate current target based on linear progression
+            progress = elapsed_fill_time / self.ship_fill_duration
+            current_target = progress * self.ship_target_propellant
+            
+            # Set propellant
+            await self.set_propellant('S0', current_target)
+            
+            # Check if we've reached target early
+            current_propellant = self.get_total_propellant('ship')
+            if current_propellant >= self.ship_target_propellant:
+                print(f"Ship propellant reached target early: {current_propellant} tons")
+                break
+            
+            # Update every 5 seconds
+            await asyncio.sleep(5)
+    
+    async def _fill_booster_propellant(self):
+        """Fill booster propellant gradually over time"""
+        print(f"Waiting {self.booster_initial_wait}s before starting booster fill...")
+        await asyncio.sleep(self.booster_initial_wait)
+        
+        print("Starting booster propellant fill...")
+        start_fill_time = time.time()
+        
+        while self.filling_active:
+            current_time = time.time()
+            elapsed_fill_time = current_time - start_fill_time
+            
+            if elapsed_fill_time >= self.booster_fill_duration:
+                # Final fill to exact target
+                await self.set_propellant('B0', self.booster_target_propellant)
+                print(f"Booster propellant fill COMPLETE: {self.booster_target_propellant} tons")
+                break
+            
+            # Calculate current target based on linear progression
+            progress = elapsed_fill_time / self.booster_fill_duration
+            current_target = progress * self.booster_target_propellant
+            
+            # Set propellant
+            await self.set_propellant('B0', current_target)
+            
+            # Check if we've reached target early
+            current_propellant = self.get_total_propellant('booster')
+            if current_propellant >= self.booster_target_propellant:
+                print(f"Booster propellant reached target early: {current_propellant} tons")
+                break
+            
+            # Update every 5 seconds
+            await asyncio.sleep(5)
+    
+    def stop_propellant_filling(self):
+        """Stop the propellant filling process"""
+        self.filling_active = False
+        print("Propellant filling stopped")
+    
+    # =========================================================================
     # ASCENT SCRIPTS - FILL THESE IN!
     # =========================================================================
     
@@ -278,16 +410,33 @@ class FlightSoftware:
         
         Your flight control code goes here!
         Use the helper methods above to control the rocket.
-        
-        Example:
-            await self.start_engines('booster', [1, 2, 3])
-            await self.set_throttle('booster', 100)
-            await self.wait_for_condition(lambda: self.get_altitude('booster') > 1000)
-            # ... etc
         """
         print("Executing Ascent Script 1 (No Roll, Downwards Flip)")
         
-        # YOUR CODE HERE!
+        # Start propellant filling automatically
+        await self.start_propellant_filling()
+        
+        # =====================================================================
+        # YOUR CUSTOM ASCENT CODE GOES HERE!
+        # =====================================================================
+        
+        # Example: Wait for propellant to be filled before continuing
+        print("Waiting for propellant filling to complete...")
+        await self.wait_for_condition(
+            lambda: (self.get_total_propellant('ship') >= self.ship_target_propellant and 
+                    self.get_total_propellant('booster') >= self.booster_target_propellant),
+            timeout=3600  # 1 hour timeout
+        )
+        
+        print("Propellant filled! Ready for launch sequence.")
+        
+        # ADD YOUR LAUNCH CODE HERE
+        # Example:
+        # await self.start_engines('booster')
+        # await self.set_throttle('booster', 100)
+        # await self.wait_for_condition(lambda: self.get_altitude('booster') > 1000)
+        # ... etc
+        
         pass
     
     async def ascent_script_2(self):
@@ -298,7 +447,26 @@ class FlightSoftware:
         """
         print("Executing Ascent Script 2 (Roll, Upwards Flip)")
         
-        # YOUR CODE HERE!
+        # Start propellant filling automatically
+        await self.start_propellant_filling()
+        
+        # =====================================================================
+        # YOUR CUSTOM ASCENT CODE GOES HERE!
+        # =====================================================================
+        
+        # Example: Wait for propellant to be filled before continuing
+        print("Waiting for propellant filling to complete...")
+        await self.wait_for_condition(
+            lambda: (self.get_total_propellant('ship') >= self.ship_target_propellant and 
+                    self.get_total_propellant('booster') >= self.booster_target_propellant),
+            timeout=3600  # 1 hour timeout
+        )
+        
+        print("Propellant filled! Ready for launch sequence.")
+        
+        # ADD YOUR LAUNCH CODE HERE
+        # This script can have different behavior than script 1
+        
         pass
     
     # =========================================================================
@@ -309,35 +477,52 @@ class FlightSoftware:
         """BOOSTER SCRIPT 1 - Catch"""
         print("Executing Booster Script 1 (Catch)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM BOOSTER CODE GOES HERE!
+        # =====================================================================
+        
+        # ADD YOUR BOOSTER LANDING CODE HERE
+        
         pass
     
     async def booster_script_2(self):
         """BOOSTER SCRIPT 2 - B13 Profile"""
         print("Executing Booster Script 2 (B13 Profile)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM BOOSTER CODE GOES HERE!
+        # =====================================================================
+        
         pass
     
     async def booster_script_3(self):
         """BOOSTER SCRIPT 3 - B14-2 Profile"""
         print("Executing Booster Script 3 (B14-2 Profile)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM BOOSTER CODE GOES HERE!
+        # =====================================================================
+        
         pass
     
     async def booster_script_4(self):
         """BOOSTER SCRIPT 4 - B15-2 Profile"""
         print("Executing Booster Script 4 (B15-2 Profile)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM BOOSTER CODE GOES HERE!
+        # =====================================================================
+        
         pass
     
     async def booster_script_5(self):
         """BOOSTER SCRIPT 5 - B16 Profile, Recommended"""
         print("Executing Booster Script 5 (B16 Profile, Recommended)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM BOOSTER CODE GOES HERE!
+        # =====================================================================
+        
         pass
     
     # =========================================================================
@@ -348,14 +533,22 @@ class FlightSoftware:
         """SHIP SCRIPT 1 - Normal Reentry"""
         print("Executing Ship Script 1 (Normal Reentry)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM SHIP CODE GOES HERE!
+        # =====================================================================
+        
+        # ADD YOUR SHIP LANDING CODE HERE
+        
         pass
     
     async def ship_script_2(self):
         """SHIP SCRIPT 2 - Hypersonic Drifting Reentry"""
         print("Executing Ship Script 2 (Hypersonic Drifting Reentry)")
         
-        # YOUR CODE HERE!
+        # =====================================================================
+        # YOUR CUSTOM SHIP CODE GOES HERE!
+        # =====================================================================
+        
         pass
     
     # =========================================================================
@@ -393,7 +586,7 @@ class FlightSoftware:
         print("STARTING FULL LAUNCH SEQUENCE")
         print("=" * 60)
         
-        # Start ascent
+        # Start ascent (which includes propellant filling)
         await self.execute_ascent()
         
         # Booster and ship scripts would be triggered by staging events
@@ -427,20 +620,51 @@ class FlightSoftware:
         print("  booster1-5 - Execute booster script")
         print("  ship1/ship2 - Execute ship script")
         print("  launch - Execute full launch sequence")
+        print("  fill - Start propellant filling")
+        print("  stopfill - Stop propellant filling")
         print("  quit - Exit")
         print("=" * 60)
         
-        # Command loop
+        # Simple command handler
         while self.running:
             try:
-                # In a real implementation, you'd want to listen for commands
-                # For now, we'll just keep the connection alive
-                await asyncio.sleep(1)
+                command = await asyncio.get_event_loop().run_in_executor(None, input, "Enter command: ")
+                command = command.strip().lower()
                 
+                if command == 'ascent1':
+                    self.ascent_script = 1
+                    asyncio.create_task(self.execute_ascent())
+                elif command == 'ascent2':
+                    self.ascent_script = 2
+                    asyncio.create_task(self.execute_ascent())
+                elif command.startswith('booster'):
+                    script_num = int(command[-1])
+                    if 1 <= script_num <= 5:
+                        self.booster_script = script_num
+                        asyncio.create_task(self.execute_booster())
+                elif command == 'ship1':
+                    self.ship_script = 1
+                    asyncio.create_task(self.execute_ship())
+                elif command == 'ship2':
+                    self.ship_script = 2
+                    asyncio.create_task(self.execute_ship())
+                elif command == 'launch':
+                    asyncio.create_task(self.execute_full_launch())
+                elif command == 'fill':
+                    asyncio.create_task(self.start_propellant_filling())
+                elif command == 'stopfill':
+                    self.stop_propellant_filling()
+                elif command == 'quit':
+                    self.running = False
+                else:
+                    print("Unknown command")
+                    
             except KeyboardInterrupt:
                 print("\nShutting down...")
                 self.running = False
                 break
+            except Exception as e:
+                print(f"Error processing command: {e}")
 
 async def main():
     """Entry point"""

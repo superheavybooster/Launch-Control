@@ -92,6 +92,104 @@
             }
         }
 
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .metric-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .metric-value {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .attitude-indicator {
+            width: 100%;
+            height: 200px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .attitude-placeholder {
+            color: #666;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .velocity-vectors {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-align: center;
+            margin: 10px 0;
+            color: #aaa;
+        }
+
+        .engine-canvas {
+            background: #2d2d2d;
+            border-radius: 10px;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .engine-count {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 5px;
+            color: #aaa;
+        }
+
+        /* Light theme adjustments */
+        body.light .metric-label {
+            color: #555;
+        }
+
+        body.light .metric-value {
+            color: #008000;
+        }
+
+        body.light .attitude-indicator {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+
+        body.light .velocity-vectors,
+        body.light .engine-count {
+            color: #555;
+        }
+
+        body.light .engine-canvas {
+            background: #e0e0e0;
+        }
+
         .telemetry-panel {
             background: #2d2d2d;
             border-radius: 10px;
@@ -162,6 +260,40 @@
             cursor: pointer;
             font-size: 16px;
             margin-bottom: 20px;
+        }
+
+        .block1-toggle {
+            padding: 10px 20px;
+            background: #3d3d3d;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        body.light .block1-toggle {
+            background: #e0e0e0;
+            color: black;
+        }
+
+        .block1-toggle:hover {
+            background: #4d4d4d;
+        }
+
+        body.light .block1-toggle:hover {
+            background: #d0d0d0;
+        }
+
+        .block1-toggle.active {
+            background: #00ff00;
+            color: black;
+        }
+
+        body.light .block1-toggle.active {
+            background: #00cc00;
+            color: white;
         }
 
         body.light .theme-toggle {
@@ -435,43 +567,57 @@
     <div class="container">
         <!-- BOOSTER TELEMETRY -->
         <div class="telemetry-panel">
-            <div class="panel-title">SUPER HEAVY BOOSTER</div>
-            <div class="metric-row">
-                <span class="metric-label"> </span>
-                <span class="metric-value" id="booster-id">B0</span>
+            <div class="panel-title">SUPER HEAVY BOOSTER <span id="booster-id">B0</span></div>
+    
+            <div class="telemetry-grid">
+                <div class="metric-group">
+                    <div class="metric-row">
+                        <span class="metric-label">ALT:</span>
+                        <span class="metric-value" id="booster-altitude">0 m</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">SPD:</span>
+                        <span class="metric-value" id="booster-speed">0 km/h</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">FUEL:</span>
+                        <span class="metric-value" id="booster-fuel">0%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">LOX:</span>
+                        <span class="metric-value" id="booster-lox">0%</span>
+                    </div>
+                </div>
+        
+                <div class="metric-group">
+                    <div class="metric-row">
+                        <span class="metric-label">F-GAS:</span>
+                        <span class="metric-value" id="booster-fuel-gas">0 t</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">O-GAS:</span>
+                        <span class="metric-value" id="booster-lox-gas">0 t</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">T-PUMP:</span>
+                        <span class="metric-value" id="booster-turbopump">0 °C</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">THR:</span>
+                        <span class="metric-value" id="booster-throttle">0%</span>
+                    </div>
+                </div>
             </div>
-            <div class="metric-row">
-                <span class="metric-label">FUEL:</span>
-                <span class="metric-value" id="booster-fuel">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX:</span>
-                <span class="metric-value" id="booster-lox">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">ALTITUDE:</span>
-                <span class="metric-value" id="booster-altitude">0 m</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">FUEL GAS:</span>
-                <span class="metric-value" id="booster-fuel-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX GAS:</span>
-                <span class="metric-value" id="booster-lox-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">TURBOPUMP:</span>
-                <span class="metric-value" id="booster-turbopump">0 °C</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">SPEED:</span>
-                <span class="metric-value" id="booster-speed">0 km/h</span>
-            </div>
+    
             <div class="velocity-vectors" id="booster-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
-            
-            <canvas id="booster-engines" class="engine-canvas" width="400" height="400"></canvas>
-            <div class="engine-count" id="booster-engine-count">Engines Running: 0/33</div>
+    
+            <canvas id="booster-engines" class="engine-canvas" width="300" height="300"></canvas>
+            <div class="engine-count" id="booster-engine-count">Engines: 0/33</div>
+    
+            <!-- Space for 3D attitude indicator -->
+            <div class="attitude-indicator" id="booster-attitude">
+                <div class="attitude-placeholder">3D Attitude Indicator</div>
+            </div>
         </div>
 
         <!-- CENTER CONTROLS -->
@@ -531,45 +677,58 @@
 
         <!-- SHIP TELEMETRY -->
         <div class="telemetry-panel">
-            <div class="panel-title">STARSHIP</div>
-            <div class="metric-row">
-                <span class="metric-label"> </span>
-                <span class="metric-value" id="ship-id">S0</span>
+            <div class="panel-title">STARSHIP <span id="ship-id">S0</span><button class="block1-toggle" id="block1-toggle">Block 1 Mode: OFF</button></div>
+    
+            <div class="telemetry-grid">
+                <div class="metric-group">
+                    <div class="metric-row">
+                        <span class="metric-label">ALT:</span>
+                        <span class="metric-value" id="ship-altitude">0 m</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">SPD:</span>
+                        <span class="metric-value" id="ship-speed">0 km/h</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">FUEL:</span>
+                        <span class="metric-value" id="ship-fuel">0%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">LOX:</span>
+                        <span class="metric-value" id="ship-lox">0%</span>
+                    </div>
+                </div>
+        
+                <div class="metric-group">
+                    <div class="metric-row">
+                        <span class="metric-label">F-GAS:</span>
+                        <span class="metric-value" id="ship-fuel-gas">0 t</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">O-GAS:</span>
+                        <span class="metric-value" id="ship-lox-gas">0 t</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">T-PUMP:</span>
+                        <span class="metric-value" id="ship-turbopump">0 °C</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">THR:</span>
+                        <span class="metric-value" id="ship-throttle">0%</span>
+                    </div>
+                </div>
             </div>
-            <div class="metric-row">
-                <span class="metric-label">FUEL:</span>
-                <span class="metric-value" id="ship-fuel">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX:</span>
-                <span class="metric-value" id="ship-lox">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">ALTITUDE:</span>
-                <span class="metric-value" id="ship-altitude">0 m</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">FUEL GAS:</span>
-                <span class="metric-value" id="ship-fuel-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">LOX GAS:</span>
-                <span class="metric-value" id="ship-lox-gas">0 t</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">TURBOPUMP:</span>
-                <span class="metric-value" id="ship-turbopump">0 °C</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">SPEED:</span>
-                <span class="metric-value" id="ship-speed">0 m/s</span>
-            </div>
+    
             <div class="velocity-vectors" id="ship-velocity-vectors">vx: 0, vy: 0, vz: 0 km/h</div>
-            
+    
             <canvas id="ship-engines" class="engine-canvas" width="250" height="250"></canvas>
-            <div class="engine-count" id="ship-engine-count">Engines Running: 0/6</div>
+            <div class="engine-count" id="ship-engine-count">Engines: 0/6</div>
+    
+            <!-- Space for 3D attitude indicator -->
+            <div class="attitude-indicator" id="ship-attitude">
+                <div class="attitude-placeholder">3D Attitude Indicator</div>
+            </div>
         </div>
-    </div>
 
     <!-- FLIGHT SCRIPTS -->
     <div class="scripts-section">
@@ -638,8 +797,9 @@
         // Propellant constants
         const MAX_BOOSTER_FUEL = 739.160;
         const MAX_BOOSTER_LOX = 2660.840;
-        const MAX_SHIP_FUEL = 326.100;
-        const MAX_SHIP_LOX = 1173.851;
+        let MAX_SHIP_FUEL = 326.100;
+        let MAX_SHIP_LOX = 1173.851;
+        let block1Mode = false;
 
         // Poll states
         const propellantPollSystems = ['SQD', 'BQD', 'Tank Farm', 'Booster', 'Ship'];
@@ -1232,6 +1392,24 @@
         // Initial engine draw
         drawBoosterEngines(Array(33).fill(false));
         drawShipEngines(Array(6).fill(false));
+
+        // Block 1 Mode toggle
+        document.getElementById('block1-toggle').addEventListener('click', () => {
+            block1Mode = !block1Mode;
+            const btn = document.getElementById('block1-toggle');
+    
+            if (block1Mode) {
+                MAX_SHIP_FUEL = 260.878;
+                MAX_SHIP_LOX = 939.104;
+                btn.textContent = 'Block 1 Mode: ON';
+                btn.classList.add('active');
+            } else {
+                MAX_SHIP_FUEL = 326.100;
+                MAX_SHIP_LOX = 1173.851;
+                btn.textContent = 'Block 1 Mode: OFF';
+                btn.classList.remove('active');
+            }
+        });
     </script>
 </body>
 </html>
