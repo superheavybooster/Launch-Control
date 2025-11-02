@@ -1,4 +1,4 @@
-websockets>=11.0.3
-pywebview>=4.3.3
-pyinstaller>=6.1.0
-asyncio>=3.4.3
+websockets==11.0.3
+pywebview==4.3.3
+pyinstaller==5.10.1
+pytest==7.4.0

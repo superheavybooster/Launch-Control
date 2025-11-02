@@ -1,9 +1,15 @@
 import asyncio
-import websockets
+try:
+    import websockets
+except Exception:
+    websockets = None
 import json
 import time
 import math
+import logging
 from enum import IntEnum, auto
+
+logger = logging.getLogger(__name__)
 
 class GameCommand(IntEnum):
     NONE = 0
@@ -56,12 +62,12 @@ class FlightSoftware:
             'ship': None
         }
         self.running = False
-        
+
         # Script selections (can be changed via commands)
         self.ascent_script = 1
         self.booster_script = 1
         self.ship_script = 1
-        
+
         # Propellant filling tracking
         self.filling_active = False
         self.ship_fill_start_time = None
@@ -76,12 +82,15 @@ class FlightSoftware:
     async def connect(self):
         """Connect to the server WebSocket"""
         try:
+            if websockets is None:
+                raise RuntimeError("websockets package not available")
+
             self.ws = await websockets.connect('ws://localhost:8765')
             self.connected = True
-            print("Connected to server")
+            logger.info("Connected to server")
             return True
         except Exception as e:
-            print(f"Failed to connect: {e}")
+            logger.exception("Failed to connect: %s", e)
             self.connected = False
             return False
     
@@ -95,7 +104,7 @@ class FlightSoftware:
                 }))
                 return True
             except Exception as e:
-                print(f"Error sending command: {e}")
+                logger.exception("Error sending command: %s", e)
                 self.connected = False
         return False
     
@@ -113,12 +122,11 @@ class FlightSoftware:
                     elif objectname.startswith('S'):
                         self.telemetry['ship'] = telem
                         
-        except websockets.exceptions.ConnectionClosed:
-            print("Connection closed")
-            self.connected = False
         except Exception as e:
-            print(f"Error receiving telemetry: {e}")
+            # websockets may be None or connection closed
+            logger.exception("Error receiving telemetry: %s", e)
             self.connected = False
+        
     
     # =========================================================================
     # HELPER METHODS - Use these in your flight scripts!
@@ -310,18 +318,18 @@ class FlightSoftware:
     async def start_propellant_filling(self):
         """Start the propellant filling process for both vehicles"""
         if self.filling_active:
-            print("Propellant filling already active!")
+            logger.warning("Propellant filling already active!")
             return
         
         self.filling_active = True
         self.ship_fill_start_time = time.time()
         self.booster_fill_start_time = time.time()
         
-        print("=" * 60)
-        print("STARTING PROPELLANT FILLING SEQUENCE")
-        print(f"Ship S0: {self.ship_target_propellant} tons over {self.ship_fill_duration}s")
-        print(f"Booster B0: {self.booster_target_propellant} tons over {self.booster_fill_duration}s")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("STARTING PROPELLANT FILLING SEQUENCE")
+        logger.info("Ship S0: %s tons over %ss", self.ship_target_propellant, self.ship_fill_duration)
+        logger.info("Booster B0: %s tons over %ss", self.booster_target_propellant, self.booster_fill_duration)
+        logger.info("=" * 60)
         
         # Start both filling tasks
         asyncio.create_task(self._fill_ship_propellant())
@@ -329,10 +337,9 @@ class FlightSoftware:
     
     async def _fill_ship_propellant(self):
         """Fill ship propellant gradually over time"""
-        print(f"Waiting {self.ship_initial_wait}s before starting ship fill...")
+        logger.info("Waiting %ss before starting ship fill...", self.ship_initial_wait)
         await asyncio.sleep(self.ship_initial_wait)
-        
-        print("Starting ship propellant fill...")
+        logger.info("Starting ship propellant fill...")
         start_fill_time = time.time()
         
         while self.filling_active:
@@ -342,7 +349,7 @@ class FlightSoftware:
             if elapsed_fill_time >= self.ship_fill_duration:
                 # Final fill to exact target
                 await self.set_propellant('S0', self.ship_target_propellant)
-                print(f"Ship propellant fill COMPLETE: {self.ship_target_propellant} tons")
+                logger.info("Ship propellant fill COMPLETE: %s tons", self.ship_target_propellant)
                 break
             
             # Calculate current target based on linear progression
@@ -355,7 +362,7 @@ class FlightSoftware:
             # Check if we've reached target early
             current_propellant = self.get_total_propellant('ship')
             if current_propellant >= self.ship_target_propellant:
-                print(f"Ship propellant reached target early: {current_propellant} tons")
+                logger.info("Ship propellant reached target early: %s tons", current_propellant)
                 break
             
             # Update every 5 seconds
@@ -363,10 +370,9 @@ class FlightSoftware:
     
     async def _fill_booster_propellant(self):
         """Fill booster propellant gradually over time"""
-        print(f"Waiting {self.booster_initial_wait}s before starting booster fill...")
+        logger.info("Waiting %ss before starting booster fill...", self.booster_initial_wait)
         await asyncio.sleep(self.booster_initial_wait)
-        
-        print("Starting booster propellant fill...")
+        logger.info("Starting booster propellant fill...")
         start_fill_time = time.time()
         
         while self.filling_active:
@@ -376,7 +382,7 @@ class FlightSoftware:
             if elapsed_fill_time >= self.booster_fill_duration:
                 # Final fill to exact target
                 await self.set_propellant('B0', self.booster_target_propellant)
-                print(f"Booster propellant fill COMPLETE: {self.booster_target_propellant} tons")
+                logger.info("Booster propellant fill COMPLETE: %s tons", self.booster_target_propellant)
                 break
             
             # Calculate current target based on linear progression
@@ -389,7 +395,7 @@ class FlightSoftware:
             # Check if we've reached target early
             current_propellant = self.get_total_propellant('booster')
             if current_propellant >= self.booster_target_propellant:
-                print(f"Booster propellant reached target early: {current_propellant} tons")
+                logger.info("Booster propellant reached target early: %s tons", current_propellant)
                 break
             
             # Update every 5 seconds
@@ -398,7 +404,7 @@ class FlightSoftware:
     def stop_propellant_filling(self):
         """Stop the propellant filling process"""
         self.filling_active = False
-        print("Propellant filling stopped")
+        logger.info("Propellant filling stopped")
     
     # =========================================================================
     # ASCENT SCRIPTS - FILL THESE IN!
@@ -411,7 +417,7 @@ class FlightSoftware:
         Your flight control code goes here!
         Use the helper methods above to control the rocket.
         """
-        print("Executing Ascent Script 1 (No Roll, Downwards Flip)")
+        logger.info("Executing Ascent Script 1 (No Roll, Downwards Flip)")
         
         # Start propellant filling automatically
         await self.start_propellant_filling()
@@ -421,14 +427,14 @@ class FlightSoftware:
         # =====================================================================
         
         # Example: Wait for propellant to be filled before continuing
-        print("Waiting for propellant filling to complete...")
+        logger.info("Waiting for propellant filling to complete...")
         await self.wait_for_condition(
             lambda: (self.get_total_propellant('ship') >= self.ship_target_propellant and 
                     self.get_total_propellant('booster') >= self.booster_target_propellant),
             timeout=3600  # 1 hour timeout
         )
         
-        print("Propellant filled! Ready for launch sequence.")
+        logger.info("Propellant filled! Ready for launch sequence.")
         
         # ADD YOUR LAUNCH CODE HERE
         # Example:
@@ -445,7 +451,7 @@ class FlightSoftware:
         
         Your flight control code goes here!
         """
-        print("Executing Ascent Script 2 (Roll, Upwards Flip)")
+        logger.info("Executing Ascent Script 2 (Roll, Upwards Flip)")
         
         # Start propellant filling automatically
         await self.start_propellant_filling()
@@ -455,14 +461,14 @@ class FlightSoftware:
         # =====================================================================
         
         # Example: Wait for propellant to be filled before continuing
-        print("Waiting for propellant filling to complete...")
+        logger.info("Waiting for propellant filling to complete...")
         await self.wait_for_condition(
             lambda: (self.get_total_propellant('ship') >= self.ship_target_propellant and 
                     self.get_total_propellant('booster') >= self.booster_target_propellant),
             timeout=3600  # 1 hour timeout
         )
         
-        print("Propellant filled! Ready for launch sequence.")
+        logger.info("Propellant filled! Ready for launch sequence.")
         
         # ADD YOUR LAUNCH CODE HERE
         # This script can have different behavior than script 1
@@ -475,7 +481,7 @@ class FlightSoftware:
     
     async def booster_script_1(self):
         """BOOSTER SCRIPT 1 - Catch"""
-        print("Executing Booster Script 1 (Catch)")
+        logger.info("Executing Booster Script 1 (Catch)")
         
         # =====================================================================
         # YOUR CUSTOM BOOSTER CODE GOES HERE!
@@ -487,7 +493,7 @@ class FlightSoftware:
     
     async def booster_script_2(self):
         """BOOSTER SCRIPT 2 - B13 Profile"""
-        print("Executing Booster Script 2 (B13 Profile)")
+        logger.info("Executing Booster Script 2 (B13 Profile)")
         
         # =====================================================================
         # YOUR CUSTOM BOOSTER CODE GOES HERE!
@@ -497,7 +503,7 @@ class FlightSoftware:
     
     async def booster_script_3(self):
         """BOOSTER SCRIPT 3 - B14-2 Profile"""
-        print("Executing Booster Script 3 (B14-2 Profile)")
+        logger.info("Executing Booster Script 3 (B14-2 Profile)")
         
         # =====================================================================
         # YOUR CUSTOM BOOSTER CODE GOES HERE!
@@ -507,7 +513,7 @@ class FlightSoftware:
     
     async def booster_script_4(self):
         """BOOSTER SCRIPT 4 - B15-2 Profile"""
-        print("Executing Booster Script 4 (B15-2 Profile)")
+        logger.info("Executing Booster Script 4 (B15-2 Profile)")
         
         # =====================================================================
         # YOUR CUSTOM BOOSTER CODE GOES HERE!
@@ -517,7 +523,7 @@ class FlightSoftware:
     
     async def booster_script_5(self):
         """BOOSTER SCRIPT 5 - B16 Profile, Recommended"""
-        print("Executing Booster Script 5 (B16 Profile, Recommended)")
+        logger.info("Executing Booster Script 5 (B16 Profile, Recommended)")
         
         # =====================================================================
         # YOUR CUSTOM BOOSTER CODE GOES HERE!
@@ -531,7 +537,7 @@ class FlightSoftware:
     
     async def ship_script_1(self):
         """SHIP SCRIPT 1 - Normal Reentry"""
-        print("Executing Ship Script 1 (Normal Reentry)")
+        logger.info("Executing Ship Script 1 (Normal Reentry)")
         
         # =====================================================================
         # YOUR CUSTOM SHIP CODE GOES HERE!
@@ -543,7 +549,7 @@ class FlightSoftware:
     
     async def ship_script_2(self):
         """SHIP SCRIPT 2 - Hypersonic Drifting Reentry"""
-        print("Executing Ship Script 2 (Hypersonic Drifting Reentry)")
+        logger.info("Executing Ship Script 2 (Hypersonic Drifting Reentry)")
         
         # =====================================================================
         # YOUR CUSTOM SHIP CODE GOES HERE!
@@ -582,9 +588,9 @@ class FlightSoftware:
     
     async def execute_full_launch(self):
         """Execute full launch sequence with all scripts"""
-        print("=" * 60)
-        print("STARTING FULL LAUNCH SEQUENCE")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("STARTING FULL LAUNCH SEQUENCE")
+        logger.info("=" * 60)
         
         # Start ascent (which includes propellant filling)
         await self.execute_ascent()
@@ -592,9 +598,9 @@ class FlightSoftware:
         # Booster and ship scripts would be triggered by staging events
         # You can add logic here to detect staging and trigger the appropriate scripts
         
-        print("=" * 60)
-        print("LAUNCH SEQUENCE COMPLETE")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("LAUNCH SEQUENCE COMPLETE")
+        logger.info("=" * 60)
     
     # =========================================================================
     # MAIN LOOP
@@ -606,24 +612,24 @@ class FlightSoftware:
         
         # Connect to server
         if not await self.connect():
-            print("Failed to connect to server. Make sure server.py is running!")
+            logger.error("Failed to connect to server. Make sure server.py is running!")
             return
         
         # Start telemetry receiver
         asyncio.create_task(self.receive_telemetry())
         
-        print("=" * 60)
-        print("Flight Software Ready!")
-        print("=" * 60)
-        print("Commands:")
-        print("  ascent1/ascent2 - Execute ascent script")
-        print("  booster1-5 - Execute booster script")
-        print("  ship1/ship2 - Execute ship script")
-        print("  launch - Execute full launch sequence")
-        print("  fill - Start propellant filling")
-        print("  stopfill - Stop propellant filling")
-        print("  quit - Exit")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("Flight Software Ready!")
+        logger.info("=" * 60)
+        logger.info("Commands:")
+        logger.info("  ascent1/ascent2 - Execute ascent script")
+        logger.info("  booster1-5 - Execute booster script")
+        logger.info("  ship1/ship2 - Execute ship script")
+        logger.info("  launch - Execute full launch sequence")
+        logger.info("  fill - Start propellant filling")
+        logger.info("  stopfill - Stop propellant filling")
+        logger.info("  quit - Exit")
+        logger.info("=" * 60)
         
         # Simple command handler
         while self.running:
@@ -657,14 +663,14 @@ class FlightSoftware:
                 elif command == 'quit':
                     self.running = False
                 else:
-                    print("Unknown command")
+                    logger.warning("Unknown command: %s", command)
                     
             except KeyboardInterrupt:
-                print("\nShutting down...")
+                logger.info("Shutting down via KeyboardInterrupt")
                 self.running = False
                 break
             except Exception as e:
-                print(f"Error processing command: {e}")
+                logger.exception("Error processing command: %s", e)
 
 async def main():
     """Entry point"""
@@ -679,9 +685,10 @@ async def main():
     # await flight_software.execute_ship()
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("StarbaseSim Flight Software")
-    print("=" * 60)
-    print("Make sure server.py is running first!")
-    print("=" * 60)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(name)s: %(message)s')
+    logger.info("%s", "=" * 60)
+    logger.info("StarbaseSim Flight Software")
+    logger.info("%s", "=" * 60)
+    logger.info("Make sure server.py is running first!")
+    logger.info("%s", "=" * 60)
     asyncio.run(main())
