@@ -53,7 +53,3 @@ pytest -q
 ## Troubleshooting
 - If the UI shows "Disconnected", make sure `Server.py` is running and StarbaseSim (the game) is listening on localhost:12345.
 - If imports for `websockets` or `pywebview` fail, install requirements in an activated venv as shown above.
-
-## Notes & next steps
-- Add CI to run tests automatically (a GitHub Actions workflow is included).
-- Consider improving packaging (include assets, icons) and adding more test coverage for flight scripts.
