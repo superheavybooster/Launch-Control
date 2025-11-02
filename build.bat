@@ -4,40 +4,30 @@ echo Building StarbaseSim Launch Control
 echo ============================================================
 echo.
 
-REM Check if pyinstaller is installed
-python -c "import PyInstaller" 2>nul
-if errorlevel 1 (
-    echo PyInstaller not found. Installing...
-    pip install pyinstaller
+REM Create a venv for reproducible builds
+if not exist ".venv" (
+    python -m venv .venv
 )
 
-REM Check if pywebview is installed
-python -c "import webview" 2>nul
-if errorlevel 1 (
-    echo PyWebView not found. Installing...
-    pip install pywebview
-)
+REM Activate venv
+call .venv\Scripts\activate
 
-REM Check if websockets is installed
-python -c "import websockets" 2>nul
-if errorlevel 1 (
-    echo websockets not found. Installing...
-    pip install websockets
-)
+REM Upgrade pip and install pinned requirements
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 
 echo.
 echo Building executable...
 echo.
 
-REM Build the executable
-pyinstaller --noconfirm --onefile --windowed ^
+REM Build the executable using the venv's pyinstaller
+.venv\Scripts\pyinstaller --noconfirm --onefile --windowed ^
     --name "LaunchControl" ^
     --icon="Rocket.ico" ^
     --add-data "LaunchControl.html;." ^
     --hidden-import "websockets" ^
     --hidden-import "webview" ^
-    --hidden-import "asyncio" ^
-    main.py
+    Main.py
 
 echo.
 echo ============================================================

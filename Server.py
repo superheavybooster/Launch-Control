@@ -3,7 +3,10 @@ import websockets
 import socket
 import json
 import threading
+import logging
 from enum import IntEnum, auto
+
+logger = logging.getLogger(__name__)
 
 class GameCommand(IntEnum):
     NONE = 0
@@ -61,7 +64,7 @@ class GameController:
             self.game_socket.connect(("localhost", 12345))
             self.game_socket.settimeout(0.1)
             self.connected = True
-            print("Connected to StarbaseSim game server")
+            logger.info("Connected to StarbaseSim game server")
             
             # Request data updates
             self.send_to_game({
@@ -70,7 +73,7 @@ class GameController:
             })
             return True
         except Exception as e:
-            print(f"Failed to connect to game: {e}")
+            logger.exception("Failed to connect to game: %s", e)
             self.connected = False
             return False
     
@@ -126,7 +129,7 @@ class GameController:
             except socket.timeout:
                 await asyncio.sleep(0.01)
             except Exception as e:
-                print(f"Error receiving from game: {e}")
+                logger.exception("Error receiving from game: %s", e)
                 self.connected = False
                 await asyncio.sleep(1)
 
@@ -136,7 +139,7 @@ controller = GameController()
 async def handle_websocket(websocket):
     """Handle WebSocket connections from web UI"""
     controller.websocket_clients.add(websocket)
-    print(f"Web client connected (total: {len(controller.websocket_clients)})")
+    logger.info("Web client connected (total: %d)", len(controller.websocket_clients))
     
     try:
         # Send connection status
@@ -149,34 +152,34 @@ async def handle_websocket(websocket):
             try:
                 data = json.loads(message)
                 command_type = data.get("type")
-                
+
                 if command_type == "game_command":
                     # Forward command to game
                     controller.send_to_game(data.get("command"))
-                    
             except json.JSONDecodeError:
-                print(f"Invalid JSON from client: {message}")
+                logger.warning("Invalid JSON from client: %s", message)
                 
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
         controller.websocket_clients.discard(websocket)
-        print(f"Web client disconnected (total: {len(controller.websocket_clients)})")
+        logger.info("Web client disconnected (total: %d)", len(controller.websocket_clients))
 
 async def main():
     # Start game receiver task
     asyncio.create_task(controller.receive_from_game())
     
     # Start WebSocket server for web UI
-    print("Starting WebSocket server on ws://localhost:8765")
+    logger.info("Starting WebSocket server on ws://localhost:8765")
     async with websockets.serve(handle_websocket, "localhost", 8765):
         await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("StarbaseSim WebSocket Proxy Server")
-    print("=" * 60)
-    print("1. Make sure StarbaseSim game is running")
-    print("2. Open launch_control.html in your browser")
-    print("=" * 60)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(name)s: %(message)s')
+    logger.info("%s", "=" * 60)
+    logger.info("StarbaseSim WebSocket Proxy Server")
+    logger.info("%s", "=" * 60)
+    logger.info("1. Make sure StarbaseSim game is running")
+    logger.info("2. Open launch_control.html in your browser")
+    logger.info("%s", "=" * 60)
     asyncio.run(main())

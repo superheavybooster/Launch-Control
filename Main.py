@@ -3,16 +3,19 @@ StarbaseSim Launch Control - Main Launcher
 Starts server, flight software, and opens UI window
 """
 
-import webview
 import threading
 import asyncio
 import sys
 import os
 from pathlib import Path
+import argparse
+import logging
 
 # Import our modules
 import Server
 import FlightSoftware
+
+logger = logging.getLogger(__name__)
 
 class LaunchControlApp:
     def __init__(self):
@@ -34,46 +37,45 @@ class LaunchControlApp:
             with open(html_file, 'r', encoding='utf-8') as f:
                 return f.read()
         except Exception as e:
-            print(f"Error loading HTML: {e}")
+            logger.exception("Error loading HTML: %s", e)
             return "<h1>Error loading LaunchControl.html</h1>"
     
     def start_server(self):
         """Start the WebSocket server in background thread"""
         def run_server():
             try:
-                print(">> Starting Server...")
+                logger.info(">> Starting Server...")
                 asyncio.run(Server.main())
             except Exception as e:
-                print(f"!! Server error: {e}")
-        
+                logger.exception("!! Server error: %s", e)
+
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
         self.server_running = True
-        print(">> Server started")
+        logger.info(">> Server started")
     
     def start_flight_software(self):
         """Start flight software in background thread"""
         def run_flight_software():
             try:
-                print(">> Starting Flight Software...")
+                logger.info(">> Starting Flight Software...")
                 # Give server time to start
                 import time
                 time.sleep(2)
                 asyncio.run(FlightSoftware.main())
             except Exception as e:
-                print(f"!! Flight Software error: {e}")
-        
+                logger.exception("!! Flight Software error: %s", e)
+
         flight_thread = threading.Thread(target=run_flight_software, daemon=True)
         flight_thread.start()
         self.flight_software_running = True
-        print(">> Flight Software started")
+        logger.info(">> Flight Software started")
     
     def run(self):
         """Main application entry point"""
-        print("=" * 60)
-        print("StarbaseSim Launch Control")
-        print("=" * 60)
-        
+        logger.info("%s", "=" * 60)
+        logger.info("StarbaseSim Launch Control")
+        logger.info("%s", "=" * 60)
         # Start server first
         self.start_server()
         
@@ -86,9 +88,10 @@ class LaunchControlApp:
         
         # Get HTML content
         html_content = self.get_html_content()
-        
-        # Create window with PyWebView
-        print(">> Opening Launch Control window...")
+
+        # Create window with PyWebView (import lazily so server-only mode can run without pywebview)
+        import webview
+        logger.info(">> Opening Launch Control window...")
         window = webview.create_window(
             title='StarbaseSim Launch Control',
             html=html_content,
@@ -102,13 +105,25 @@ class LaunchControlApp:
         
         # Start webview (this blocks until window is closed)
         webview.start(debug=False)  # Set debug=True if YOU need to debug
-        
-        print(">> Launch Control closed")
+
+        logger.info(">> Launch Control closed")
 
 def main():
     """Entry point"""
     app = LaunchControlApp()
     app.run()
-
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Launch Control runner')
+    parser.add_argument('--server', action='store_true', help='Run server only')
+    parser.add_argument('--flight', action='store_true', help='Run flight software only')
+    parser.add_argument('--gui', action='store_true', help='Run GUI (default)')
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(name)s: %(message)s')
+
+    if args.server:
+        asyncio.run(Server.main())
+    elif args.flight:
+        asyncio.run(FlightSoftware.main())
+    else:
+        main()
