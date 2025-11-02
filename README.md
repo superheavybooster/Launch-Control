@@ -57,6 +57,3 @@ pytest -q
 ## Notes & next steps
 - Add CI to run tests automatically (a GitHub Actions workflow is included).
 - Consider improving packaging (include assets, icons) and adding more test coverage for flight scripts.
-
-## License
-Small personal project — add your preferred license if you want to publish.
